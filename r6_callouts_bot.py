@@ -7,6 +7,12 @@ from telebot import types
 from os import walk, path
 
 
+"""Telegram bot to learn Rainbow Six Siege maps callouts"""
+
+__author__ = "Sergei Vorobev <s.vorobev101@gmail.com>"
+__version__ = "0.1"
+
+
 # logging config
 log_file = "files/r6_callouts_bot.log"
 max_log_file_size = 10  # max log file size in MB
@@ -25,7 +31,7 @@ class R6CalloutsBot:
         self.config_file = "files/config.txt"
         self.users_file = "files/users.txt"
         self.quiz_file = "files/quiz.txt"
-        with open(self.config_file, "r") as of:  # no handling here. Let  it crush if there's a problem with cfg
+        with open(self.config_file, "r") as of:  # no handling here. Let  it crash if there's a problem with cfg
             self.cfg = json.load(of)
         try:
             with open(self.users_file, "r") as of:
@@ -89,6 +95,7 @@ class R6CalloutsBot:
                 elif msg_txt == '/debug':
                     output = "nope :)"
                     self.bot.send_message(message.chat.id, output)
+                    self.debug(message=message)
                 elif msg_txt == '/start':
                     if message.chat.id not in self.users:
                         self.users[message.chat.id] = message.chat.username
@@ -112,11 +119,12 @@ class R6CalloutsBot:
         # sticker handler. Replies with random sticker from prepared list
         @self.bot.message_handler(content_types=['sticker'])
         def get_sticker_id(message):
+            """logs sent sticker ID"""
             logger.info(f"used sticker: {message.sticker.file_id}")
             self.bot.send_sticker(message.chat.id, self.default_sticker)
             # self.send_sticker(message)
 
-    def debug(self):
+    def debug(self, message):
         """just a placeholder for whatever we need to debug a running bot"""
         pass
 
@@ -162,11 +170,12 @@ class R6CalloutsBot:
         return markup
 
     def main_menu(self, message, text="Yes?"):
-        """get back to the main menu and "restart" your session, so you won't get any navigation errors"""
+        """get back to the main menu"""
         markup = self.create_markup(buttons=self.b_main_menu, cancel_cmd=False)
         self.bot.send_message(message.chat.id, text, reply_markup=markup)
 
     def view_map_callouts(self, message, navigation):
+        """provide map schematics with callout names for all available maps"""
         typ = message.content_type
         if typ != 'text':
             output = "let's stick to buttons, ok?"
@@ -198,7 +207,7 @@ class R6CalloutsBot:
                 logger.warning(f"No schematics found for {name}")
 
     def quiz(self, message, navigation, total_questions=None):
-        """Send {total_questions} quiz messages with X answer options. Reply to each answer"""
+        """Send {self.quiz_questions_amount} quiz messages with {self.quiz_options_amount + 1} answer options"""
         name = message.text
         typ = message.content_type
         if typ != 'text':
@@ -209,7 +218,7 @@ class R6CalloutsBot:
         if name == self.cancel_cmd:
             self.cancel_handler(message)
             return
-        if navigation == 'map pick':  # just got here
+        if navigation == 'map pick':
             output = "Choose a map or play with every map pull"
             quiz_buttons = list(self.b_all_maps)
             quiz_buttons.insert(0, self.all_maps_val)
@@ -235,6 +244,7 @@ class R6CalloutsBot:
             self.quiz_polling(message=message, map_name=name, quiz_questions=quiz_questions)
         else:
             self.main_menu(message=message, text="ugh... I'm a bit lost. Let's start again")
+            logger.warning(f"Lost on quiz with name={name}\nnavigation={navigation}")
 
     def quiz_polling(self, message, map_name, quiz_questions):
         """Poll all the quiz questions"""
@@ -255,6 +265,7 @@ class R6CalloutsBot:
             self.main_menu(message=message, text=output)
 
     def check_answer(self, message, navigation, quiz_questions, map_name, correct_answer=None):
+        """check the answer for running quiz"""
         name = message.text
         typ = message.content_type
         if typ != 'text':
@@ -297,6 +308,9 @@ class R6CalloutsBot:
             self.quiz_polling(message=message, map_name=map_name, quiz_questions=quiz_questions[1:])
 
     def create_list_of_quiz_questions(self, quiz_length, map_name,  total_options):
+        """composes list of quiz question options. First element is always the correct answer. The're total 1 +
+        self.quiz_options_amount options for each question and total of self.quiz_questions_amount questions per quiz.
+        Each quiz run each question is randomized from the quiz pull (for any chosen map all for all supported maps"""
         all_questions = []
         chosen_options = []  # quiz options already picked up by random
         true_quiz_length = min(quiz_length, len(self.quiz_separate_data[map_name].items()))
@@ -320,7 +334,8 @@ class R6CalloutsBot:
         return all_questions
 
     def send_help_response(self, message):
-        """ /help command processor. Basically just lists all available commands for user"""
+        """ /help command processor. Basically just lists all available commands for user.
+        Redundant but might be useful later"""
         self.main_menu(message=message, text="I'll just send you back to main menu for easy navigation")
 
     def send_disclaimer(self, message):
@@ -336,6 +351,8 @@ class R6CalloutsBot:
         self.main_menu(message=message, text=output)
 
     def send_sticker(self, message, st_id=None):
+        """reply to a message with a sticker.
+        If sticker ID is not provided, bot choses one random sticker from the sticker pull"""
         if st_id:
             sticker_id = st_id
         else:
@@ -370,9 +387,11 @@ class R6CalloutsBot:
             self.bot.register_next_step_handler(msg, self.contact_dev, incoming_message=incoming_message)
 
     def cancel_handler(self, message):
+        """handles /cancel command"""
         self.main_menu(message, "Ok")
 
     def start_bot(self):
+        """start infinite polling: bot would automatically restart in case of a connection issue or platform restart"""
         self.bot.infinity_polling()
 
 
