@@ -10,7 +10,7 @@ from os import walk, path
 """Telegram bot to learn Rainbow Six Siege maps callouts"""
 
 __author__ = "Sergei Vorobev <s.vorobev101@gmail.com>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 
 # logging config
@@ -63,6 +63,7 @@ class R6CalloutsBot:
         self.help_cmd = '/help'
 
         self.author = '@lavrooshka'
+        self.author_chat_id = 264272264
 
         # initiate bot
         self.bot = telebot.TeleBot(self.token)
@@ -104,10 +105,11 @@ class R6CalloutsBot:
                             json.dump(self.users, wf)
                     output = "Welcome!"
                     self.main_menu(message=message, text=output)
-                elif msg_txt == '/contact':
-                    self.main_menu(message=message, text="work in progress for now")  # TODO reroute messages to @author
             elif message.text.lower() == 'hi':
                 self.bot.send_message(message.chat.id, 'hello')
+            elif msg_txt == '/contact':
+                # self.main_menu(message=message, text="work in progress for now")  # TODO reroute messages to @author
+                self.contact_dev(message=message)
             elif message.text == '/whoami':
                 output = f"name: {message.chat.username}\nchat ID: {message.chat.id}"
                 self.bot.reply_to(message, output)
@@ -359,29 +361,36 @@ class R6CalloutsBot:
             sticker_id = random.choice(self.main_sticker_pull)
         self.bot.send_sticker(message.chat.id, sticker_id)
 
-    def contact_dev(self, message, incoming_message=None):  # TODO well, implement that
+    def contact_dev(self, message, incoming_message=None):  # TODO add picture handling
         """forward messages to @author"""
         name = message.text
         typ = message.content_type
-        if typ not in ('text', 'pic'):
-            output = "let's stick to text and pictures, ok?"
-            msg = self.bot.reply_to(message=message, text=output)
-            self.bot.register_next_step_handler(msg, self.contact_dev, incoming_message="placeholder")  # need to put something proper here
+        if typ not in ('text'):
+            output = "let's stick to just text ok?"
+            markup = self.create_markup(buttons=[self.confirm_cmd, self.cancel_cmd])
+            msg = self.bot.reply_to(message=message, text=output, reply_markup=markup)
+            self.bot.register_next_step_handler(msg, self.contact_dev, incoming_message=incoming_message)
             return
         if name == self.cancel_cmd:
             self.cancel_handler(message)
             return
+        if name == self.confirm_cmd:
+            self.bot.send_message(self.author_chat_id, text=incoming_message)
+            output = "Message sent.\nThanks for the feedback!"
+            self.main_menu(message=message, text=output)
+            return
         if not incoming_message:
-            output = f"Ok, tell me what's on your mind. You can send multiple messages, including pictures " \
-                     f"(please keep it civil)!\nPress {self.confirm_cmd} when you're ready to send your message, or" \
+            output = f"Ok, tell me what's on your mind. You can send multiple messages, but just text for now." \
+                     f"\nPress {self.confirm_cmd} when you're ready to send your message, or" \
                      f"{self.cancel_cmd} if you changed your mind"
             markup = self.create_markup(buttons=[self.confirm_cmd, self.cancel_cmd])
             msg = self.bot.send_message(message.chat.id, text=output, reply_markup=markup)
-            self.bot.register_next_step_handler(msg, self.contact_dev, incoming_message="Message start\n")
+            self.bot.register_next_step_handler(msg, self.contact_dev,
+                                                incoming_message=f"Message from {message.chat.username} {message.chat.id} start:\n")
         else:
             # TODO separate picture and text processing
-            incoming_message += name
-            output = "You can send more messages or pictures if you need"
+            incoming_message += '\n' + name
+            output = "Anything else?"
             markup = self.create_markup(buttons=[self.confirm_cmd, self.cancel_cmd])
             msg = self.bot.send_message(message.chat.id, text=output, reply_markup=markup)
             self.bot.register_next_step_handler(msg, self.contact_dev, incoming_message=incoming_message)
