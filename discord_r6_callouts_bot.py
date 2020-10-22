@@ -225,7 +225,7 @@ class R6Callouts:
         except FileNotFoundError:
             logger.warning(f"Picture missing for files/quiz/{map_name}/{pic_name}")
             output = f"huh... I couldn't find proper picture for files/quiz/{map_name}/{pic_name}"
-            with open("files/quiz/misc/not_found.png", "rb") as pic:
+            with open("files/misc/not_found.png", "rb") as pic:
                 quiz_pic = discord.File(pic)
         emoji_options = self.num_to_emoji(range(1, len(quiz_question) + 1))
         output += "\n"*2
