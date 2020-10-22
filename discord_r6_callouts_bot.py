@@ -27,7 +27,7 @@ logger.addHandler(handler)
 
 class R6Callouts:
     def __init__(self):
-        self.TOKEN = "NzYzNzQ1NDk5MDE4NjkwNjMw.X38LbA.4bMAczLecF7xXStTGmdE4BykHKg"
+        self.TOKEN = "your token"
         self.bot_cmd_prefix = "!"
         self.quiz_file = "files/quiz.txt"
         try:
