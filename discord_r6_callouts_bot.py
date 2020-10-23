@@ -37,7 +37,6 @@ class R6Callouts:
             self.quiz_separate_data = {}
         self.bot = commands.Bot(command_prefix=self.bot_cmd_prefix)
         self.active_quizzes = {}
-
         self.emoji_dict = {0: "\U00000030\U000020E3",
                            1: "\U00000031\U000020E3",
                            2: "\U00000032\U000020E3",
@@ -138,7 +137,7 @@ class R6Callouts:
                 self.active_quizzes[chat_id] = True
             else:
                 await ctx.send(f"{ctx.message.author.mention} chill! We already have a quiz running")
-                logger.info(f"{ctx.message.author.mention} attempted multiple instance of quiz! shame!")
+                logger.info(f"{chat_id} attempted multiple instance of quiz! shame!")
                 return
             quiz_questions = self.create_list_of_quiz_questions(amount_of_questions, map_name, 5)
             embed = discord.Embed(title="Starting quiz!", color=0x00ff00)
@@ -149,6 +148,7 @@ class R6Callouts:
             await ctx.send(embed=embed)
             end_output = "Once more?"
             await asyncio.sleep(self.quiz_start_timer)
+            logger.info(f"{chat_id} started quiz on {map_name} for {amount_of_questions} questions")
             for i, question in enumerate(quiz_questions):
                 # check if user cancels the quiz
                 if self.active_quizzes[chat_id] == "cancel":
@@ -182,22 +182,10 @@ class R6Callouts:
             else:
                 self.active_quizzes[chat_id] = "cancel"
                 output = "Ok, stopping the quiz..."
+                logger.info(f"{chat_id} cancelled their quiz")
         else:
             output = "Sorry, this command only supported in text channels and DMs"
         await ctx.send(output)
-
-    @staticmethod
-    def is_positive_integer(val=0):
-        """quick check if passed value is a positive integer for whenever we need to check for quiz amount, timer and
-        other parameters."""
-        try:
-            val = int(val)  # cut floats. It's fine
-            if val > 0:
-                return True
-            else:
-                return False
-        except (ValueError, TypeError):
-            return False
 
     def create_list_of_quiz_questions(self, quiz_length, map_name, total_options):
         """composes list of quiz question options. First element is always the correct answer. The're total 1 +
@@ -226,7 +214,7 @@ class R6Callouts:
         return all_questions
 
     async def quiz_polling(self, ctx, map_name, quiz_question, question_number, chat_id, chat_type, quiz_timer):
-        """poll quiz for a DM chat"""
+        """poll quiz for a DM chat or channel"""
         output = f"Question # {question_number[0]}/{question_number[1]}."
         correct_answer = quiz_question[0]  # always first option
         random.shuffle(quiz_question)
@@ -299,6 +287,19 @@ class R6Callouts:
             else:
                 logger.warning(f"{entry} doesn't look like a number with that pesky {type(entry)} type")
         return emoji_numbers
+
+    @staticmethod
+    def is_positive_integer(val=0):
+        """quick check if passed value is a positive integer for whenever we need to check for quiz amount, timer and
+        other parameters."""
+        try:
+            val = int(val)  # cut floats. It's fine
+            if val > 0:
+                return True
+            else:
+                return False
+        except (ValueError, TypeError):
+            return False
 
     @staticmethod
     def reaction_reader(reactions, allow_multiple=False, allow_none=False):
