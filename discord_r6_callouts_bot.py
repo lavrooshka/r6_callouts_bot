@@ -10,7 +10,7 @@ from discord.ext import commands
 """Discord bot to learn Rainbow Six Siege maps callouts"""
 
 __author__ = "Sergei Vorobev <s.vorobev101@gmail.com>"
-__version__ = "0.1"
+__version__ = "0.2"
 
 # logging config
 log_file = "files/log/discord_callouts_bot.log"
@@ -55,6 +55,7 @@ class R6Callouts:
         self.quiz_question_timer = 10
         self.quiz_start_timer = 3
         self.default_quiz_question_amount = 5
+        self.max_quiz_timer = 30
         try:
             with open(self.quiz_file, "r") as of:
                 self.quiz_separate_data = json.load(of)
@@ -84,12 +85,13 @@ class R6Callouts:
 
         @self.bot.command(name="quiz")
         async def start_quiz_polling(ctx):
-            """Try naming all spots on maps
-            Usage: '!quiz mapname amount_of_questions%'
-            e.g '!quiz KAFE 7'
-            you can also go for random question pool: just use 'all' instead of map name.
+            """Try naming all spots on R6 maps. Use '!help quiz' for detailed info
+            Usage: '!quiz KAFE 7'. You can pick any map from '!maps' pool
+            or go for a random set of questions using 'all' instead of map name.
             To answer a question just react on the emoji number you believe is correct.
-            You'll have 10 seconds to answer each question"""
+            You'll have 10 seconds to answer each question, or if you pass the 3rd parameter
+            you can set your own timer. E.g. '!quiz KANAL 10 5'
+            will start the quiz on KANAL for 10 questions and 5 second window to answer"""
             # Quiz polling only allowed in DM and text channels
             message_channel = ctx.channel
             if isinstance(message_channel, discord.channel.TextChannel):
@@ -102,6 +104,7 @@ class R6Callouts:
             message_split = ctx.message.content.split()
             map_name = self.list_get(message_split, 1, None)
             amount_of_questions = self.list_get(message_split, 2, None)
+            quiz_timer = self.list_get(message_split, 3, None)
             if not map_name:
                 await ctx.send(f"Not like this.\nThe bot has 2 parameters: map name (check out !maps command) "
                                f"and the amount of questions in the quiz.\nExample: '!quiz BANK 5'")
@@ -114,22 +117,21 @@ class R6Callouts:
                 return
             else:
                 map_name = map_name.upper()
-            if not amount_of_questions:
-                await ctx.send(f"By the way, you can also add 3rd parameter: the amount of questions in a quiz. "
+            if not amount_of_questions:  # let user know, they can use
+                await ctx.send(f"By the way, you can also add 2nd parameter: the amount of questions in a quiz. "
                                f"e.g. '!quiz BANK 10'.\nFor now we'll start with {self.default_quiz_question_amount} "
                                f"questions")
                 amount_of_questions = self.default_quiz_question_amount
-            try:
+            if self.is_positive_integer(amount_of_questions):
                 amount_of_questions = int(amount_of_questions)
-                if amount_of_questions < 1:
-                    await ctx.send(f"Kudos for exploratory testing, but no. We'll start with "
-                                   f"{self.default_quiz_question_amount} questions")
-                    amount_of_questions = self.default_quiz_question_amount
-            except ValueError:
-                await ctx.send(f"The 3rd parameter should be a number (duuuuh)\n"
-                               f"e.g. '!quiz BANK 10'.\nFor now we'll start with {self.default_quiz_question_amount} "
-                               f"questions")
+            else:
+                await ctx.send(f"Kudos for exploratory testing, but no, the 2nd parameter should be"
+                               f"a positive integer\nWe'll start with {self.default_quiz_question_amount} questions")
                 amount_of_questions = self.default_quiz_question_amount
+            if self.is_positive_integer(quiz_timer):
+                quiz_timer = min(int(quiz_timer), self.max_quiz_timer)  # limit max question time
+            else:
+                quiz_timer = self.quiz_question_timer
             # check if quiz is already running in this channel
             chat_id = message_channel.id
             if not self.active_quizzes.get(chat_id, False):
@@ -141,7 +143,7 @@ class R6Callouts:
             quiz_questions = self.create_list_of_quiz_questions(amount_of_questions, map_name, 5)
             embed = discord.Embed(title="Starting quiz!", color=0x00ff00)
             av = f"You're playing on {map_name}"
-            res = f" You'll have to answer {len(quiz_questions)} questions within {self.quiz_question_timer} seconds " \
+            res = f" You'll have to answer {len(quiz_questions)} questions within {quiz_timer} seconds " \
                 f"timer window.\n Quiz starts in {self.quiz_start_timer} seconds.\nGood luck!"
             embed.add_field(name=av, value=res, inline=False)
             await ctx.send(embed=embed)
@@ -154,7 +156,7 @@ class R6Callouts:
                     break
                 await self.quiz_polling(ctx=ctx, map_name=map_name, quiz_question=question,
                                         question_number=(i + 1, len(quiz_questions)), chat_id=chat_id,
-                                        chat_type=chat_type)
+                                        chat_type=chat_type, quiz_timer=quiz_timer)
             self.active_quizzes[chat_id] = False  # exclude from active quizzes
             await ctx.send(end_output)
 
@@ -169,6 +171,7 @@ class R6Callouts:
         self.quiz_separate_data[self.all_maps_val] = maps_buffer
 
     async def cancel_processor(self, ctx):
+        """raises cancel flag that stops current quiz for user or channel"""
         message_channel = ctx.channel
         chat_id = ctx.channel.id
         if type(message_channel) in (discord.channel.TextChannel, discord.channel.DMChannel):
@@ -182,6 +185,19 @@ class R6Callouts:
         else:
             output = "Sorry, this command only supported in text channels and DMs"
         await ctx.send(output)
+
+    @staticmethod
+    def is_positive_integer(val=0):
+        """quick check if passed value is a positive integer for whenever we need to check for quiz amount, timer and
+        other parameters."""
+        try:
+            val = int(val)  # cut floats. It's fine
+            if val > 0:
+                return True
+            else:
+                return False
+        except (ValueError, TypeError):
+            return False
 
     def create_list_of_quiz_questions(self, quiz_length, map_name, total_options):
         """composes list of quiz question options. First element is always the correct answer. The're total 1 +
@@ -209,7 +225,7 @@ class R6Callouts:
                 pass
         return all_questions
 
-    async def quiz_polling(self, ctx, map_name, quiz_question, question_number, chat_id, chat_type):
+    async def quiz_polling(self, ctx, map_name, quiz_question, question_number, chat_id, chat_type, quiz_timer):
         """poll quiz for a DM chat"""
         output = f"Question # {question_number[0]}/{question_number[1]}."
         correct_answer = quiz_question[0]  # always first option
@@ -239,11 +255,11 @@ class R6Callouts:
         # this basically makes reaction reading mechanic less efficient since there will be no user input evaluation
         # but this should be fine for group chats
         if chat_type == "channel":
-            await asyncio.sleep(self.quiz_question_timer)
+            await asyncio.sleep(quiz_timer)
             await ctx.send(f"It was # {quiz_question.index(correct_answer) + 1}: {correct_answer}")
             return
         # proceed with DMs and reaction evaluation
-        await self.wait_for_reaction(ctx, msg.id, chat_id)
+        await self.wait_for_reaction(ctx, msg.id, chat_id, quiz_timer)
         if self.active_quizzes.get(chat_id, None) == "cancel":  # don't show correct answer if quiz was cancelled
             return
         msg_after = await ctx.fetch_message(msg.id)
@@ -262,9 +278,9 @@ class R6Callouts:
         else:
             await ctx.send(f"Nope, sorry, not {quiz_question[chosen_answer]}. It's actually {correct_answer}")
 
-    async def wait_for_reaction(self, ctx, message_id, user_id):
+    async def wait_for_reaction(self, ctx, message_id, user_id, wait_time):
         """a primitive way to speed up quiz so user won't have to wait 10 seconds after each question"""
-        for _ in range(1, self.quiz_question_timer + 1):
+        for _ in range(1, wait_time + 1):
             await asyncio.sleep(1)
             msg_later = await ctx.fetch_message(message_id)
             if any(reaction.count == 2 for reaction in msg_later.reactions) or \
