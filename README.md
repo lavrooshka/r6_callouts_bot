@@ -55,9 +55,11 @@ python discord_r6_callouts_bot.py
 
 
 ### todo
-* add map schematic output to discord bot
-* add answer evaluation to the channel mode for discord bot (not sure about that one)
-* allow user to modify timer for quiz questions for discord bot
+- [ ] add map schematic output to discord bot
+- [ ] add answer evaluation to the channel mode for discord bot (not sure about that one)
+- [x] allow user to modify timer for quiz questions for discord bot
+- [ ] add unique users and quiz runs count
+
 
 
 ## credits
