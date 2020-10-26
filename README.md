@@ -54,8 +54,13 @@ To show call layouts for certain map use command
 git clone https://github.com/lavrooshka/r6_callouts_bot.git
 cd r6_callouts_bot
 pip install -r requirements.txt
-# set your bot token in discord_r6_callouts_bot.py for self.TOKEN var 
+# set your bot token in discord_r6_callouts_bot.py for self.TOKEN var
+# set your bot token in files/tg_config {"MAIN": {"TOKEN": "<token>" 
 python discord_r6_callouts_bot.py
+
+# telegram bots available across the whole platform so there's no need 
+# for multiple instances. But just in case:
+# python telegram_r6_callouts.bot.py 
 ```
 
 ### content status

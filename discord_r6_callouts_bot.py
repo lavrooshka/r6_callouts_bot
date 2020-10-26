@@ -11,7 +11,7 @@ from os import path, walk
 """Discord bot to learn Rainbow Six Siege maps callouts"""
 
 __author__ = "Sergei Vorobev <s.vorobev101@gmail.com>"
-__version__ = "0.3"
+__version__ = "0.4"
 
 # logging config
 log_file = "files/log/discord_callouts_bot.log"
@@ -84,21 +84,16 @@ class R6Callouts:
                                f"\n Example: '!view KANAL'")
                 return
             if map_name.upper() not in self.b_all_maps:
+                logger.info(f"{ctx.channel.id} requested non-existent map {map_name}")
                 await ctx.send(f"Yeah, sorry, {ctx.message.author.mention}, I've no idea what you mean. Pretty sure "
                                f"there is no {map_name} or it has been misspelled somehow. Try !maps to list all "
                                f"available maps")
-                logger.info(f"User {ctx.message.author} requested non-existent map {map_name}")
             else:
                 await self.view_map(ctx, map_name.upper())
 
-        @self.bot.command(name="stop")  # todo there's probably a better way to handle separate commands in the same way
+        @self.bot.command(aliases=["stop", "cancel"])
         async def stop_quiz(ctx):
             """Cancel currently running quiz. Alias: cancel"""
-            await self.cancel_processor(ctx)
-
-        @self.bot.command(name="cancel")
-        async def cancel_quiz(ctx):
-            """Cancel currently running quiz. Alias: stop"""
             await self.cancel_processor(ctx)
 
         @self.bot.command(name="quiz")
@@ -118,6 +113,7 @@ class R6Callouts:
                 chat_type = "DM"
             else:
                 await ctx.send("Sorry, this command only supported in text channels and DMs")
+                logger.info(f"An attempt to use bot in {message_channel}")
                 return
             message_split = ctx.message.content.split()
             map_name = self.list_get(message_split, 1, None)
@@ -131,11 +127,13 @@ class R6Callouts:
             elif map_name.upper() in ("RANDOM", "ALL", "ANY", "RND", "EVERYTHING"):
                 map_name = self.all_maps_val
             elif map_name.upper() not in self.b_all_maps:
-                await ctx.send(f"Sorry, I don't know {map_name}.\n!maps command will list all the available quizzes")
+                logger.info(f"{ctx.channel.id} attempted quiz on non-existent map {map_name}")
+                await ctx.send(f"Sorry, {ctx.message.author.mention} I don't know {map_name}.\n"
+                               f"!maps command will list all the available quizzes")
                 return
             else:
                 map_name = map_name.upper()
-            if not amount_of_questions:  # let user know, they can use
+            if not amount_of_questions:  # notify user of the 2nd parameter
                 await ctx.send(f"By the way, you can also add 2nd parameter: the amount of questions in a quiz. "
                                f"e.g. '!quiz BANK 10'.\nFor now we'll start with {self.default_quiz_question_amount} "
                                f"questions")
@@ -308,7 +306,7 @@ class R6Callouts:
                 break
 
     async def view_map(self, ctx, map_name):
-        logger.info(f"{ctx.message.author} requested {map_name} schematics")
+        logger.info(f"{ctx.channel.id} requested {map_name} schematics")
         map_path = f"{self.maps_dir}{map_name}"
         if path.exists(map_path):
             # send all related pics
