@@ -89,7 +89,7 @@ class R6Callouts:
                                f"available maps")
                 logger.info(f"User {ctx.message.author} requested non-existent map {map_name}")
             else:
-                await self.view_map(ctx, map_name)
+                await self.view_map(ctx, map_name.upper())
 
         @self.bot.command(name="stop")  # todo there's probably a better way to handle separate commands in the same way
         async def stop_quiz(ctx):
