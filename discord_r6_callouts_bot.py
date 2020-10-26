@@ -5,12 +5,13 @@ import asyncio
 import logging
 from logging.handlers import RotatingFileHandler
 from discord.ext import commands
+from os import path, walk
 
 
 """Discord bot to learn Rainbow Six Siege maps callouts"""
 
 __author__ = "Sergei Vorobev <s.vorobev101@gmail.com>"
-__version__ = "0.2"
+__version__ = "0.3"
 
 # logging config
 log_file = "files/log/discord_callouts_bot.log"
@@ -30,6 +31,7 @@ class R6Callouts:
         self.TOKEN = "your token"
         self.bot_cmd_prefix = "!"
         self.quiz_file = "files/quiz.txt"
+        self.maps_dir = "files/maps/"
         try:
             with open(self.quiz_file, "r") as of:
                 self.quiz_separate_data = json.load(of)
@@ -71,6 +73,23 @@ class R6Callouts:
             val = "\n".join(list(self.b_all_maps)[:-1])
             embed.add_field(name=nm, value=val)
             await ctx.send(embed=embed)
+
+        @self.bot.command(name="view")
+        async def view_map_schematics(ctx):
+            """shows schematics for a certain map"""
+            message_split = ctx.message.content.split()
+            map_name = self.list_get(message_split, 1, None)
+            if not map_name:
+                await ctx.send(f"{ctx.message.author.mention}, please specify the map you need."
+                               f"\n Example: '!view KANAL'")
+                return
+            if map_name.upper() not in self.b_all_maps:
+                await ctx.send(f"Yeah, sorry, {ctx.message.author.mention}, I've no idea what you mean. Pretty sure "
+                               f"there is no {map_name} or it has been misspelled somehow. Try !maps to list all "
+                               f"available maps")
+                logger.info(f"User {ctx.message.author} requested non-existent map {map_name}")
+            else:
+                await self.view_map(ctx, map_name)
 
         @self.bot.command(name="stop")  # todo there's probably a better way to handle separate commands in the same way
         async def stop_quiz(ctx):
@@ -239,19 +258,32 @@ class R6Callouts:
         msg = await ctx.send(content=output, file=quiz_pic)
         for option in emoji_options:
             await msg.add_reaction(option)
-        # no need to check for correct answer in channel call. Just spit out the answer after wait time.
-        # this basically makes reaction reading mechanic less efficient since there will be no user input evaluation
-        # but this should be fine for group chats
+        reactions = []
+        # in channels only evaluate overall statistics. No need for mentions
         if chat_type == "channel":
             await asyncio.sleep(quiz_timer)
-            await ctx.send(f"It was # {quiz_question.index(correct_answer) + 1}: {correct_answer}")
+            msg_after = await ctx.fetch_message(msg.id)
+            for reaction in msg_after.reactions:
+                reactions.append(reaction.count - 1)
+            total_reactions = sum(reactions)
+            correct_reactions = reactions[quiz_question.index(correct_answer)]
+            if correct_reactions == 0:
+                output = f"No one guessed it right!\nIt was # {quiz_question.index(correct_answer) + 1}: " \
+                         f"{correct_answer}"
+            elif correct_reactions == 1:
+                output = f"Just one person got it right!\nIt was " \
+                         f"# {quiz_question.index(correct_answer) + 1}: {correct_answer}"
+            elif correct_reactions > 1:
+                output = f"{correct_reactions} out of {total_reactions} got it right!\nIt was " \
+                         f"# {quiz_question.index(correct_answer) + 1}: {correct_answer}"
+            await ctx.send(output)
             return
         # proceed with DMs and reaction evaluation
         await self.wait_for_reaction(ctx, msg.id, chat_id, quiz_timer)
         if self.active_quizzes.get(chat_id, None) == "cancel":  # don't show correct answer if quiz was cancelled
             return
         msg_after = await ctx.fetch_message(msg.id)
-        reactions = []
+
         for reaction in msg_after.reactions:
             reactions.append(reaction.count - 1)
         if reactions.count(1) > 1:
@@ -274,6 +306,24 @@ class R6Callouts:
             if any(reaction.count == 2 for reaction in msg_later.reactions) or \
                     self.active_quizzes.get(user_id, None) == "cancel":
                 break
+
+    async def view_map(self, ctx, map_name):
+        logger.info(f"{ctx.message.author} requested {map_name} schematics")
+        map_path = f"{self.maps_dir}{map_name}"
+        if path.exists(map_path):
+            # send all related pics
+            for root, dirs, files in walk(map_path):
+                for file in files:
+                    if file.endswith('png'):
+                        pic_name = f"{map_path}/{file}"
+                        with open(pic_name, 'rb') as pic:
+                            map_schema = discord.File(pic)
+                        await ctx.send(file=map_schema)
+            await ctx.send("Here you go")
+        else:
+            logger.warning(f"Failed to locate files for {map_name} map!")
+            await ctx.send(f"Sorry, {ctx.message.author.mention}, I couldn't find files for {map_name}.\nThis will"
+                           f"be reported, so someone would fix it one day. I hope")
 
     def num_to_emoji(self, iterator):
         """converts numbers into emoji representation"""
@@ -329,4 +379,5 @@ class R6Callouts:
 logger.info("Start the bot!")
 bot = R6Callouts()
 bot.run_bot()
+
 

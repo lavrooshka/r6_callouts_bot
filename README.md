@@ -1,5 +1,5 @@
 # Telegram & Discord bots to train your map calls in R6 siege
-These are two bots with the same goal: help you improve your map calls in Rainbow Six Siege  
+These are two bots with the same goal: help you improve your map calls in Rainbow Six Siege   
 
 ## Usage
 ### Telegram
@@ -43,6 +43,11 @@ or
 !cancel
 ````
 
+To show call layouts for certain map use command
+````
+!view BANK
+````
+
 ## Installation
 
 ```
@@ -53,12 +58,17 @@ pip install -r requirements.txt
 python discord_r6_callouts_bot.py
 ```
 
+### content status
+Only 3 maps are ready for now: Kafe, Theme park and Coastline.
+The rest are in progress.
+
 
 ### todo
-- [ ] add map schematic output to discord bot
-- [ ] add answer evaluation to the channel mode for discord bot (not sure about that one)
+- [x] add map schematic output to discord bot
+- [x] add answer evaluation to the channel mode for discord bot (not sure about that one)
 - [x] allow user to modify timer for quiz questions for discord bot
-- [ ] add unique users and quiz runs count
+- [x] add unique users and quiz runs count
+- [ ] create calls for all maps
 
 
 
