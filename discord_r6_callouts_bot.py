@@ -165,7 +165,7 @@ class R6Callouts:
             await ctx.send(embed=embed)
             end_output = "Once more?"
             await asyncio.sleep(self.quiz_start_timer)
-            logger.info(f"{chat_id} started quiz on {map_name} for {amount_of_questions} questions")
+            logger.info(f"{ctx.message.author} started quiz on {map_name} for {amount_of_questions} questions")
             for i, question in enumerate(quiz_questions):
                 # check if user cancels the quiz
                 if self.active_quizzes[chat_id] == "cancel":
@@ -199,7 +199,7 @@ class R6Callouts:
             else:
                 self.active_quizzes[chat_id] = "cancel"
                 output = "Ok, stopping the quiz..."
-                logger.info(f"{chat_id} cancelled their quiz")
+                logger.info(f"{ctx.message.author} cancelled their quiz")
         else:
             output = "Sorry, this command only supported in text channels and DMs"
         await ctx.send(output)
