@@ -29,7 +29,7 @@ logger.addHandler(handler)
 class R6Callouts:
     def __init__(self):
         self.TOKEN = "your token"
-        self.bot_cmd_prefix = "!"
+        self.bot_cmd_prefix = "$"
         self.quiz_file = "files/quiz.txt"
         self.maps_dir = "files/maps/"
         try:
