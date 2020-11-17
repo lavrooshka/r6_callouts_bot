@@ -17,12 +17,12 @@ any command can be stopped at any time with
 I'll add a list of servers running this bot. However you can always add bot to your server. Follow the installation guide.
 You can start quiz with the following command 
 ````
-!quiz BANK 10
+$quiz BANK 10
 ````
 which will queue 10 question for, you guess it, BANK map. Replace BANK with the map you want and 10 with any positive integer to queue for any other map.
 Your can also go for
 ````
-!quiz all 15
+$quiz all 15
 ```` 
 to get questions from all maps pool.
 
@@ -36,16 +36,16 @@ Bot can be ran in two mods: Direct messages and Channel chats. A few differences
 
 any running quiz can by stopped any time with
 ````
-!stop
+$stop
 ````
 or
 ````
-!cancel
+$cancel
 ````
 
 To show call layouts for certain map use command
 ````
-!view BANK
+$view BANK
 ````
 
 ## Installation

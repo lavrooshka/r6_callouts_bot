@@ -53,7 +53,7 @@ class R6Callouts:
         self.emoji_dict.setdefault("cross", "\U0000274C")
         self.b_all_maps = None
         self.all_maps_val = "all maps!"
-        self.quiz_question_timer = 10
+        self.quiz_question_timer = 15
         self.quiz_start_timer = 3
         self.default_quiz_question_amount = 5
         self.max_quiz_timer = 30
@@ -81,29 +81,29 @@ class R6Callouts:
             map_name = self.list_get(message_split, 1, None)
             if not map_name:
                 await ctx.send(f"{ctx.message.author.mention}, please specify the map you need."
-                               f"\n Example: '!view KANAL'")
+                               f"\n Example: '{self.bot_cmd_prefix}view KANAL'")
                 return
             if map_name.upper() not in self.b_all_maps:
                 logger.info(f"{ctx.channel.id} requested non-existent map {map_name}")
                 await ctx.send(f"Yeah, sorry, {ctx.message.author.mention}, I've no idea what you mean. Pretty sure "
-                               f"there is no {map_name} or it has been misspelled somehow. Try !maps to list all "
-                               f"available maps")
+                               f"there is no {map_name} or it has been misspelled somehow. Try {self.bot_cmd_prefix}maps "
+                               f"to list all available maps")
             else:
                 await self.view_map(ctx, map_name.upper())
 
         @self.bot.command(aliases=["stop", "cancel"])
         async def stop_quiz(ctx):
-            """Cancel currently running quiz. Alias: cancel"""
+            """Cancel currently running quiz. Alias: stop, cancel"""
             await self.cancel_processor(ctx)
 
         @self.bot.command(name="quiz")
         async def start_quiz_polling(ctx):
-            """Try naming all spots on R6 maps. Use '!help quiz' for detailed info
-            Usage: '!quiz KAFE 7'. You can pick any map from '!maps' pool
+            """Try naming all spots on R6 maps. Use '$help quiz' for detailed info
+            Usage: '$quiz KAFE 7'. You can pick any map from '$maps' pool
             or go for a random set of questions using 'all' instead of map name.
             To answer a question just react on the emoji number you believe is correct.
             You'll have 10 seconds to answer each question, or if you pass the 3rd parameter
-            you can set your own timer. E.g. '!quiz KANAL 10 5'
+            you can set your own timer. E.g. '$quiz KANAL 10 5'
             will start the quiz on KANAL for 10 questions and 5 second window to answer"""
             # Quiz polling only allowed in DM and text channels
             message_channel = ctx.channel
@@ -120,8 +120,9 @@ class R6Callouts:
             amount_of_questions = self.list_get(message_split, 2, None)
             quiz_timer = self.list_get(message_split, 3, None)
             if not map_name:
-                await ctx.send(f"Not like this.\nThe bot has 2 parameters: map name (check out !maps command) "
-                               f"and the amount of questions in the quiz.\nExample: '!quiz BANK 5'")
+                await ctx.send(f"Not like this.\nThe bot has 2 parameters: map name (check out {self.bot_cmd_prefix}maps"
+                               f" command) and the amount of questions in the quiz.\nExample: '{self.bot_cmd_prefix}quiz"
+                               f" BANK 5'")
                 return
             # a bit more civil way to start quiz for the whole map pool
             elif map_name.upper() in ("RANDOM", "ALL", "ANY", "RND", "EVERYTHING"):
@@ -129,13 +130,13 @@ class R6Callouts:
             elif map_name.upper() not in self.b_all_maps:
                 logger.info(f"{ctx.channel.id} attempted quiz on non-existent map {map_name}")
                 await ctx.send(f"Sorry, {ctx.message.author.mention} I don't know {map_name}.\n"
-                               f"!maps command will list all the available quizzes")
+                               f"{self.bot_cmd_prefix}maps command will list all the available quizzes")
                 return
             else:
                 map_name = map_name.upper()
             if not amount_of_questions:  # notify user of the 2nd parameter
                 await ctx.send(f"By the way, you can also add 2nd parameter: the amount of questions in a quiz. "
-                               f"e.g. '!quiz BANK 10'.\nFor now we'll start with {self.default_quiz_question_amount} "
+                               f"e.g. '{self.bot_cmd_prefix}quiz BANK 10'.\nFor now we'll start with {self.default_quiz_question_amount} "
                                f"questions")
                 amount_of_questions = self.default_quiz_question_amount
             if self.is_positive_integer(amount_of_questions):
@@ -163,7 +164,7 @@ class R6Callouts:
                 f"timer window.\n Quiz starts in {self.quiz_start_timer} seconds.\nGood luck!"
             embed.add_field(name=av, value=res, inline=False)
             await ctx.send(embed=embed)
-            end_output = "Once more?"
+            end_output = "Quiz done!"
             await asyncio.sleep(self.quiz_start_timer)
             logger.info(f"{ctx.message.author} started quiz on {map_name} for {amount_of_questions} questions")
             for i, question in enumerate(quiz_questions):
